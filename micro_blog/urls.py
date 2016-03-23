@@ -1,7 +1,9 @@
 from django.conf.urls import url
-from micro_blog.views import (site_blog_home, blog_tag, admin_post_list, new_post, edit_blog_post,
-                              view_post, admin_category_list, new_blog_category, blog_category,
-                              blog_article, archive_posts, delete_category, delete_post, edit_category, change_category_status, )
+from micro_blog.views import (
+    site_blog_home, blog_tag, admin_post_list, new_post, edit_blog_post,
+    view_post, admin_category_list, new_blog_category, blog_category,
+    blog_article, archive_posts, delete_category, delete_post, edit_category,
+    change_category_status, )
 
 urlpatterns = [
     url(r'^$', site_blog_home, name='site_blog_home'),

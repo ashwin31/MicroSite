@@ -1,26 +1,25 @@
-from django.shortcuts import render_to_response, render, get_object_or_404, redirect
-from django.http import HttpResponseRedirect, HttpResponse, Http404
-from django.shortcuts import redirect
-from django.template.context_processors import csrf
-from django.contrib.auth.decorators import login_required
-# from django.views.decorators.csrf import csrf_exempt
-from micro_blog.models import Category, Tags, Post, Subscribers, create_slug
-from pages.models import simplecontact, Contact
 import math
-# from django.core.files.storage import default_storage
-from micro_blog.forms import BlogpostForm, BlogCategoryForm
 import datetime
 import json
-from micro_admin.models import User
-from ast import literal_eval
-from pages.forms import SimpleContactForm, ContactForm, SubscribeForm
-from django.conf import settings
-import sendgrid
-from django.core.cache import cache
-from microurl import google_mini
+
+from django.shortcuts import render_to_response, render, get_object_or_404, redirect
+from django.http import HttpResponseRedirect, HttpResponse, Http404
+from django.template.context_processors import csrf
+from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.core.cache import cache
 from django.template.defaultfilters import slugify
-from .tasks import *
+from django.conf import settings
+
+import sendgrid
+from microurl import google_mini
+
+from micro_blog.models import Category, Tags, Post, Subscribers
+from pages.models import simplecontact, Contact
+from micro_blog.forms import BlogpostForm, BlogCategoryForm
+from micro_admin.models import User
+from pages.forms import SimpleContactForm, ContactForm, SubscribeForm
+from micro_blogo.tasks import *
 
 # @csrf_exempt
 # def recent_photos(request):
@@ -79,7 +78,15 @@ def edit_category(request, category_slug):
     if request.user.is_superuser:
         c = {}
         c.update(csrf(request))
-        return render(request, 'admin/blog/blog-category-edit.html', {'blog_category': blog_category, 'csrf_token': c['csrf_token']})
+        return render(
+                request,
+                'admin/blog/blog-category-edit.html',
+                {
+                    'blog_category': blog_category,
+                    'csrf_token': c['csrf_token']
+                }
+            )
+
     else:
         return render_to_response('admin/accessdenied.html')
 
@@ -122,8 +129,16 @@ def site_blog_home(request):
 
     c = {}
     c.update(csrf(request))
-    return render(request, 'site/blog/index.html', {'current_page': page, 'last_page': no_pages,
-                            'posts': blog_posts, 'csrf_token': c['csrf_token']})
+    return render(
+            request,
+            'site/blog/index.html',
+            {
+                'current_page': page,
+                'last_page': no_pages,
+                'posts': blog_posts,
+                'csrf_token': c['csrf_token']
+            }
+        )
 
 
 def blog_article(request, slug):
@@ -156,7 +171,6 @@ def blog_article(request, slug):
                     prev_url = '/blog/'+str(prev_que.slug)+'/'
             except:
                 prev_url = ''
-            question = post
             break
     if not blog_post.status == 'P':
         if not request.user.is_authenticated():
@@ -165,13 +179,26 @@ def blog_article(request, slug):
     minified_url = ''
     if 'HTTP_HOST' in request.META.keys():
         try:
-            minified_url = google_mini('https://' + request.META['HTTP_HOST'] + reverse('micro_blog:blog_article', kwargs={'slug': slug}), settings.GGL_URL_API_KEY)
+            minified_url = google_mini(
+                'https://' + request.META['HTTP_HOST'] + reverse('micro_blog:blog_article', kwargs={'slug': slug}),
+                settings.GGL_URL_API_KEY
+            )
         except:
             minified_url = 'https://' + request.META['HTTP_HOST'] + reverse('micro_blog:blog_article', kwargs={'slug': slug})
     c = {}
     c.update(csrf(request))
-    return render(request, 'site/blog/article.html', {'csrf_token': c['csrf_token'], 'related_posts': related_posts,
-                                                      'post': blog_post, 'minified_url': minified_url, 'prev_url': prev_url, 'next_url': next_url})
+    return render(
+            request,
+            'site/blog/article.html',
+            {
+                'csrf_token': c['csrf_token'],
+                'related_posts': related_posts,
+                'post': blog_post,
+                'minified_url': minified_url,
+                'prev_url': prev_url,
+                'next_url': next_url
+            }
+        )
 
 
 def blog_tag(request, slug):
@@ -190,8 +217,17 @@ def blog_tag(request, slug):
         raise Http404
     c = {}
     c.update(csrf(request))
-    return render(request, 'site/blog/index.html', {'current_page': page, 'tag': tag,
-                                'last_page': no_pages, 'posts': blog_posts, 'csrf_token': c['csrf_token']})
+    return render(
+            request,
+            'site/blog/index.html',
+            {
+                'current_page': page,
+                'tag': tag,
+                'last_page': no_pages,
+                'posts': blog_posts,
+                'csrf_token': c['csrf_token']
+            }
+        )
 
 
 def blog_category(request, slug):
@@ -211,12 +247,26 @@ def blog_category(request, slug):
         raise Http404
     c = {}
     c.update(csrf(request))
-    return render(request, 'site/blog/index.html', {'current_page': page, 'category': category, 'last_page': no_pages,
-                                    'posts': blog_posts, 'csrf_token': c['csrf_token']})
+    return render(
+            request,
+            'site/blog/index.html',
+            {
+                'current_page': page,
+                'category': category,
+                'last_page': no_pages,
+                'posts': blog_posts,
+                'csrf_token': c['csrf_token']
+            }
+        )
 
 
 def archive_posts(request, year, month):
-    blog_posts = Post.objects.filter(status="P", updated_on__year=year, updated_on__month=month).order_by('-updated_on')
+    blog_posts = Post.objects.filter(
+            status="P",
+            updated_on__year=year,
+            updated_on__month=month
+        ).order_by('-updated_on')
+
     items_per_page = 6
     if "page" in request.GET:
         if not request.GET.get('page').isdigit():
@@ -230,8 +280,18 @@ def archive_posts(request, year, month):
         raise Http404
     c = {}
     c.update(csrf(request))
-    return render(request, 'site/blog/index.html', {'current_page': page, 'year':year, 'month': month, 'last_page': no_pages,
-                                                        'posts': blog_posts, 'csrf_token': c['csrf_token']})
+    return render(
+            request,
+            'site/blog/index.html',
+            {
+                'current_page': page,
+                'year': year,
+                'month': month,
+                'last_page': no_pages,
+                'posts': blog_posts,
+                'csrf_token': c['csrf_token']
+            }
+        )
 
 
 @login_required
@@ -285,8 +345,11 @@ def new_post(request):
             sending_msg.set_subject("New blog post has been created")
 
             blog_url = 'https://www.micropyramid.com/blog/' + str(blog_post.slug) + '/'
-            message = '<p>New blog post has been created by ' + str(request.user) + ' with the name ' + str(blog_post.title) + ' in the category '
-            message += str(blog_post.category.name) + '.</p>' + '<p>Please <a href="' + blog_url + '">click here</a> to view the blog post in the site.</p>'
+            message = '<p>New blog post has been created by ' + str(request.user) + \
+                ' with the name ' + str(blog_post.title) + ' in the category '
+
+            message += str(blog_post.category.name) + '.</p>' + '<p>Please <a href="' + \
+                blog_url + '">click here</a> to view the blog post in the site.</p>'
 
             sending_msg.set_html(message)
             sending_msg.set_text('New blog post has been created')
@@ -328,7 +391,7 @@ def edit_blog_post(request, blog_slug):
             if request.user.is_superuser and request.POST.get('slug'):
                 if blog_post.old_slugs:
                     blog_post_slugs = blog_post.old_slugs.split(',')
-                    if not existing_slug in blog_post_slugs:
+                    if existing_slug not in blog_post_slugs:
                         old_slugs = blog_post.old_slugs
                         old_slugs += ',' + str(existing_slug)
                     else:
@@ -378,7 +441,16 @@ def edit_blog_post(request, blog_slug):
     if request.user.is_superuser or blog_post.user == request.user:
         c = {}
         c.update(csrf(request))
-        return render(request, 'admin/blog/blog-edit.html', {'blog_post': blog_post, 'categories': categories, 'csrf_token': c['csrf_token']})
+        return render(
+                request,
+                'admin/blog/blog-edit.html',
+                {
+                    'blog_post': blog_post,
+                    'categories': categories,
+                    'csrf_token': c['csrf_token']
+                }
+            )
+
     else:
         return render_to_response('admin/accessdenied.html')
 
@@ -451,11 +523,11 @@ def contact(request):
         message += "<p>Contact Number: "+request.POST.get('phone')+"</p>"
 
     if 'enquery_type' in request.POST.keys():
-        message += "<p><b>Domain Details: </b></p><p>Domain: "+request.POST.get('domain')+\
-                    "</p><p>Domain URL: "+request.POST.get('domain_url')+"</p>"
+        message += "<p><b>Domain Details: </b></p><p>Domain: " + request.POST.get('domain') + \
+                    "</p><p>Domain URL: " + request.POST.get('domain_url') + "</p>"
 
-        message += "<p><b>General Information: </b></p>"+"<p>Enquery Type: "+\
-                    request.POST.get('enquery_type')+"</p><p>Country: "+request.POST.get('country')
+        message += "<p><b>General Information: </b></p>" + "<p>Enquery Type: " + \
+            request.POST.get('enquery_type') + "</p><p>Country: " + request.POST.get('country')
 
     sg = sendgrid.SendGridClient(settings.SG_USER, settings.SG_PWD)
 
